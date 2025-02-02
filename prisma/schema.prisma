@@ -14,21 +14,17 @@ enum Role {
 }
 
 model User {
-  id            String      @id @default(uuid())
-  email         String      @unique
-  username      String      @unique
-  password      String
-  role          Role        @default(STAFF)
-  verified      Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  createdBy     User?       @relation("UserCreation", fields: [createdById], references: [id])
-  createdById   String?
-  createdUsers  User[]      @relation("UserCreation")
-  sessions      Session[]
-  verifyToken   VerifyToken?
-  activityLogs  ActivityLog[]
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      Role     @default(WARGA)
+  desaId    String?
+  desa      Desa?    @relation(fields: [desaId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
 
 model Session {
   id          String    @id @default(uuid())
@@ -40,17 +36,6 @@ model Session {
   updatedAt   DateTime  @updatedAt
 
   @@index([userId])
-}
-
-model VerifyToken {
-  id          String    @id @default(uuid())
-  token       String    @unique
-  expires     DateTime
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String    @unique
-  createdAt   DateTime  @default(now())
-
-  @@index([token])
 }
 
 model ActivityLog {
@@ -67,3 +52,51 @@ model ActivityLog {
   @@index([createdAt])
 }
 
+
+model Desa {
+  id                String              @id @default(uuid())
+  nama              String              @unique
+  kecamatan         String              
+  kabupaten         String              
+  provinsi          String              
+  jadwalPengumpulan JadwalPengumpulan[]
+  pengumpulanSampah PengumpulanSampah[]
+  users             User[]
+  insiden           Insiden[]
+}
+
+model JadwalPengumpulan {
+  id          String   @id @default(uuid())
+  desaId      String   
+  hari        String   
+  waktuMulai  DateTime 
+  waktuSelesai DateTime 
+  desa        Desa     @relation(fields: [desaId], references: [id])
+}
+
+model PengumpulanSampah {
+  id           String   @id @default(uuid())
+  desaId       String   
+  namaPemilik  String   
+  berat        Decimal  @db.Decimal(5,2)
+  jenisSampah  String   
+  poin         Int
+  waktu        DateTime @default(now())
+  desa         Desa     @relation(fields: [desaId], references: [id])
+}
+
+model Leaderboard {
+  id           String @id @default(uuid())
+  namaPemilik  String 
+  totalPoin    Int    
+  jumlahSetoran Int   
+}
+
+model Insiden {
+  id          String   @id @default(uuid())
+  desaId      String   
+  deskripsi   String   
+  status      String   @default("Pending")
+  createdAt   DateTime @default(now())
+  desa        Desa     @relation(fields: [desaId], references: [id])
+}

@@ -1,61 +1,31 @@
-import type { NextApiRequest, NextApiResponse } from "next"
-import { verify } from "jsonwebtoken"
-import prisma from "./prisma"
-import type { User, Role } from "@prisma/client"
+import jwt from "jsonwebtoken"
+import { PrismaClient } from "@prisma/client"
+import type { JwtPayload } from "../types/auth"
 
-export interface AuthenticatedRequest extends NextApiRequest {
-  user?: User
-}
+const prisma = new PrismaClient()
 
-export const verifyToken = async (token: string): Promise<User | null> => {
+export function verifyToken(token: string): JwtPayload | null {
   try {
-    const decoded = verify(token, process.env.JWT_SECRET!) as { id: string }
-    return await prisma.user.findUnique({ where: { id: decoded.id } })
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload
+    return decoded
   } catch (error) {
     console.error("Token verification error:", error)
     return null
   }
 }
 
-export const authenticateUser = async (req: AuthenticatedRequest, res: NextApiResponse, next: () => void) => {
-  const token = req.headers.authorization?.split(" ")[1]
-
-  if (!token) {
-    return res.status(401).json({ message: "Authentication required" })
-  }
-
-  const user = await verifyToken(token)
-
-  if (!user) {
-    return res.status(401).json({ message: "Invalid token or user not found" })
-  }
-
-  req.user = user
-  next()
-}
-
-export const authorizeRoles = (roles: Role[]) => {
-  return (req: AuthenticatedRequest, res: NextApiResponse, next: () => void) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Forbidden" })
-    }
-    next()
-  }
-}
-
-export const logActivity = async (userId: string, action: string, details?: string, req?: NextApiRequest) => {
+export async function logActivity(userId: string, action: string, details: string) {
   try {
     await prisma.activityLog.create({
       data: {
         userId,
         action,
         details,
-        ipAddress: req?.socket.remoteAddress,
-        userAgent: req?.headers["user-agent"],
+        ipAddress: "", // Bisa ditambahkan IP dari request
+        userAgent: "", // Bisa ditambahkan user agent dari request
       },
     })
   } catch (error) {
-    console.error("Error logging activity:", error)
+    console.error("Activity logging error:", error)
   }
 }
-
