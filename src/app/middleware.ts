@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
       headers: {
         'Access-Control-Allow-Origin': 'http://localhost:3000', // Ganti dengan domain frontend Anda
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-role',
         'Access-Control-Allow-Credentials': 'true',
         'Access-Control-Max-Age': '86400', // Cache preflight selama 24 jam
       },
@@ -23,7 +23,7 @@ export function middleware(request: NextRequest) {
   // Tambahkan header CORS
   response.headers.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Ganti dengan domain frontend Anda
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-role'); // Menambahkan x-user-role
   response.headers.set('Access-Control-Allow-Credentials', 'true');
 
   // Tambahkan header keamanan tambahan (opsional)

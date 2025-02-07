@@ -26,7 +26,11 @@ export class AuthController {
       const { email, password } = loginSchema.parse(body);
 
       // Check if user exists by email
-      const user = await prisma.user.findUnique({ where: { email } });
+      const user = await prisma.user.findUnique({
+        where: { email },
+        // Tidak perlu include desa, cukup ambil desaId
+      });
+
       if (!user) {
         return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
       }
@@ -48,6 +52,7 @@ export class AuthController {
             email: user.email,
             username: user.username,
             role: user.role, // Include role in the response
+            desaId: user.desaId || null, // Include the village (desa) ID if available
           },
           message: `Welcome, ${user.username}! You are logged in as ${user.role}.`,
         },
@@ -83,7 +88,7 @@ export class AuthController {
           email,
           username,
           password: hashedPassword,
-          role: role || Role.STAFF, // Default to 'STAFF' if no role provided
+          role: role || Role.WARGA, // Default to 'WARGA' if no role provided
         },
       });
 

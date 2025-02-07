@@ -10,7 +10,23 @@ datasource db {
 enum Role {
   SUPERADMIN
   ADMIN
-  STAFF
+  WARGA
+}
+
+enum InsidenStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum Hari {
+  SENIN
+  SELASA
+  RABU
+  KAMIS
+  JUMAT
+  SABTU
+  MINGGU
 }
 
 model User {
@@ -19,12 +35,90 @@ model User {
   username  String   @unique
   password  String
   role      Role     @default(WARGA)
-  desaId    String?
-  desa      Desa?    @relation(fields: [desaId], references: [id])
+  desaId    String?  
+  desa      Desa?    @relation(fields: [desaId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  sessions       Session[]
+  activityLogs   ActivityLog[]
+  leaderboard    Leaderboard?  @relation(fields: [id], references: [userId], onDelete: Cascade)
+
+  @@index([desaId])
 }
 
+model Desa {
+  id                String              @id @default(uuid())
+  nama              String              @unique
+  kecamatan         String              
+  kabupaten         String              
+  provinsi          String              
+  jadwalPengumpulan JadwalPengumpulan[]
+  pengumpulanSampah PengumpulanSampah[]
+  users             User[]
+  insiden           Insiden[]
+
+  @@index([nama])
+}
+
+model JadwalPengumpulan {
+  id          String   @id @default(uuid())
+  desaId      String   
+  hari        Hari
+  waktuMulai  DateTime 
+  waktuSelesai DateTime 
+  desa        Desa     @relation(fields: [desaId], references: [id], onDelete: Cascade)
+
+  @@index([desaId, hari])
+}
+
+model PengumpulanSampah {
+  id           String   @id @default(uuid())
+  desaId       String   
+  userId       String   
+  berat        Decimal  @db.Decimal(5,2)
+  jenisSampah  String   
+  poin         Int
+  waktu        DateTime @default(now())
+  rt           String   @db.VarChar(3)
+  rw           String   @db.VarChar(3)
+  desa         Desa     @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([desaId])
+  @@index([userId])
+}
+
+model Leaderboard {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  totalPoin         Int    
+  jumlahPengumpulan Int
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([totalPoin])
+}
+
+model Insiden {
+  id          String   @id @default(uuid())
+  desaId      String   
+  type        String
+  location    String
+  description String   @db.Text
+  status      InsidenStatus @default(PENDING)
+  time        DateTime @default(now())
+  reporterId  String
+  handledById String?  
+  timeHandled DateTime?
+  desa        Desa     @relation(fields: [desaId], references: [id], onDelete: Cascade)
+  reporter    User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  handledBy   User?    @relation(fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([desaId])
+  @@index([status])
+  @@index([reporterId])
+  @@index([handledById])
+}
 
 model Session {
   id          String    @id @default(uuid())
@@ -50,74 +144,4 @@ model ActivityLog {
 
   @@index([userId])
   @@index([createdAt])
-}
-
-
-model PengumpulanSampah {
-  id           String   @id @default(uuid())
-  berat        Decimal  @db.Decimal(5, 2)
-  namaPemilik  String   @map("nama_pemilik") @db.VarChar(100)
-  rt           String   @db.VarChar(3)
-  rw           String   @db.VarChar(3)
-  desa         String   @db.VarChar(100)
-  jenisSampah  String   @map("jenis_sampah") @db.VarChar(50)
-  poin         Int
-  waktu        DateTime @default(now()) @db.Timestamp
-
-  @@index([waktu])
-  @@index([namaPemilik])
-  @@index([jenisSampah])
-  @@map("pengumpulan_sampah")
-}
-
-model Pengguna {
-  id        String   @id @default(uuid())
-  nama      String   @db.VarChar(100)
-  email     String   @unique @db.VarChar(100)
-  password  String   @db.VarChar(100)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp
-
-  @@map("pengguna")
-}
-
-model Desa {
-  id                String              @id @default(uuid())
-  nama              String              @db.VarChar(100)
-  kecamatan         String              @db.VarChar(100)
-  kabupaten         String              @db.VarChar(100)
-  provinsi          String              @db.VarChar(100)
-  jadwalPengumpulan JadwalPengumpulan[]
-
-  @@map("desa")
-}
-
-model JadwalPengumpulan {
-  id               String   @id @default(uuid())
-  desaId           String   @map("desa_id")
-  hariPengumpulan  String   @map("hari_pengumpulan") @db.VarChar(20)
-  waktuMulai       DateTime @map("waktu_mulai") @db.Time()
-  waktuSelesai     DateTime @map("waktu_selesai") @db.Time()
-  desa             Desa     @relation(fields: [desaId], references: [id])
-
-  @@map("jadwal_pengumpulan")
-}
-
-// Views, functions, and triggers are not directly supported in Prisma
-// You may need to create these manually in your database or use raw SQL queries
-
-model TotalPoinPengguna {
-  namaPemilik String @map("nama_pemilik")
-  totalPoin   Int    @map("total_poin")
-
-  @@id([namaPemilik])
-  @@map("total_poin_pengguna")
-}
-
-model Leaderboard {
-  namaPemilik       String @map("nama_pemilik")
-  totalPoin         Int    @map("total_poin")
-  jumlahPengumpulan Int    @map("jumlah_pengumpulan")
-
-  @@id([namaPemilik])
-  @@map("leaderboard")
 }

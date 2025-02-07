@@ -9,12 +9,11 @@ export interface RegisterRequest {
   email: string
   username: string
   password: string
-  role?: Role
+  role?: Role // Menggunakan tipe Role yang sudah sesuai dengan enum yang ada
 }
 
 export interface LoginResponse {
-  token: string
-  user: Omit<User, "password">
+  user: Omit<User, "password"> // Pastikan password tidak disertakan dalam respons
   message: string
 }
 
@@ -24,4 +23,3 @@ export interface JwtPayload {
 }
 
 export type UserProfile = Omit<User, "password">
-

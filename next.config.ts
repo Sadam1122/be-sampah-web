@@ -1,45 +1,65 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Aktifkan strict mode React untuk debugging
+  // Aktifkan Strict Mode untuk debugging lebih baik
   reactStrictMode: true,
 
-  // Aktifkan SWC untuk minifikasi lebih cepat
+  // Menggunakan SWC untuk minifikasi lebih cepat dan optimal
   swcMinify: true,
 
-  // Konfigurasi custom headers
+  // Konfigurasi Custom Headers untuk API
   async headers() {
     return [
       {
-        source: "/api/:path*", // Berlaku untuk semua endpoint API
+        source: "/api/:path*", // Berlaku hanya untuk semua endpoint API
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "http://localhost:3000" }, // Ganti dengan domain frontend Anda
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
+          // Pengaturan CORS
+          {
+            key: "Access-Control-Allow-Origin",
+            value: process.env.CORS_ORIGIN || "http://localhost:3000", // Sesuaikan dengan frontend
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization, x-user-role",
+          },
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true", // Memungkinkan pengiriman kredensial (misalnya cookies)
+          },
+
+          // Pengaturan Keamanan Tambahan
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "geolocation=(self), microphone=()" }, // Contoh pembatasan fitur
         ],
       },
     ];
   },
 
-  // Konfigurasi tambahan untuk image optimization (opsional)
+  // Konfigurasi Image Optimization
   images: {
-    domains: ["example.com"], // Ganti dengan domain tempat gambar Anda di-host
-    formats: ["image/avif", "image/webp"], // Format gambar yang didukung
+    domains: ["example.com"], // Ganti dengan domain gambar yang digunakan
+    formats: ["image/avif", "image/webp"],
   },
 
-  // Konfigurasi environment variable
+  // Konfigurasi Environment Variables
   env: {
-    API_BASE_URL: "http://localhost:3001/api", // Ganti dengan URL API backend Anda
+    API_BASE_URL: process.env.API_BASE_URL || "http://localhost:3001/api", // Bisa diubah dari `.env.local`
   },
 
-  // Konfigurasi TypeScript (opsional)
+  // Konfigurasi TypeScript
   typescript: {
-    ignoreBuildErrors: false, // Hentikan build jika ada error TypeScript
+    ignoreBuildErrors: false, // Pastikan build gagal jika ada error TypeScript
   },
+
+  // Output berbasis Standalone (untuk deploy yang lebih fleksibel)
+  output: "standalone",
 };
 
 export default nextConfig;

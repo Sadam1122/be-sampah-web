@@ -11,30 +11,63 @@ const desaSchema = z.object({
   provinsi: z.string().max(100),
 })
 
-export async function GET() {
+/**
+ * ✅ GET: Fetch desa by ID or fetch all desa.
+ */
+export async function GET(request: Request) {
   try {
-    const desa = await prisma.desa.findMany()
-    return NextResponse.json(desa)
+    // Handle query parameters or fetch all data
+    const { searchParams } = new URL(request.url)
+    const desaId = searchParams.get("id")
+
+    // If there is a desaId in the query, fetch that specific desa
+    if (desaId) {
+      const desa = await prisma.desa.findUnique({
+        where: { id: desaId }, // Searching by ID
+      })
+
+      if (!desa) {
+        return NextResponse.json({ error: "Desa not found" }, { status: 404 })
+      }
+
+      return NextResponse.json(desa)
+    } else {
+      // If no desaId, fetch all desa
+      const desa = await prisma.desa.findMany()
+      return NextResponse.json(desa)
+    }
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
+    console.error("Error in GET /api/desa/rute:", error)
+    return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 })
   }
 }
 
+/**
+ * ✅ POST: Create new desa (only accessible by SUPERADMIN role)
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const validatedData = desaSchema.parse(body)
+
+    // Check if user is SUPERADMIN (can be based on headers or JWT token)
+    const role = request.headers.get("x-role") // Assuming role is passed via headers
+
+    if (role !== "SUPERADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Create the new desa
     const newDesa = await prisma.desa.create({
       data: validatedData,
     })
+
     return NextResponse.json(newDesa, { status: 201 })
   } catch (error) {
+    console.error("Error in POST /api/desa/:", error)
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 })
+      return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
     }
-    console.error(error)
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
   }
 }
-
