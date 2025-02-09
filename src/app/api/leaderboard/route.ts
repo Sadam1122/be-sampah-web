@@ -43,14 +43,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Periksa apakah namaPemilik memiliki constraint @unique dalam schema.prisma
+    // Periksa apakah namaPemilik sudah ada di leaderboard
     const existingUser = await prisma.leaderboard.findFirst({
       where: { namaPemilik: body.namaPemilik },
     });
 
     let newEntry;
     if (existingUser) {
-      // Jika user sudah ada, update poin & jumlah pengumpulan
+      // Jika user sudah ada, update totalPoin & jumlahPengumpulan
       newEntry = await prisma.leaderboard.update({
         where: { id: existingUser.id }, // Gunakan id sebagai unique key
         data: {
@@ -59,9 +59,10 @@ export async function POST(request: Request) {
         },
       });
     } else {
-      // Jika belum ada, buat entry baru
+      // Jika belum ada, buat entry baru dengan id unik
       newEntry = await prisma.leaderboard.create({
         data: {
+          id: crypto.randomUUID(), // Menambahkan id unik
           namaPemilik: body.namaPemilik,
           totalPoin: body.totalPoin,
           jumlahPengumpulan: body.jumlahPengumpulan,

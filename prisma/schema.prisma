@@ -7,141 +7,117 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+model activitylog {
+  id        String   @id
+  action    String
+  details   String?  @db.Text
+  ipAddress String?
+  userAgent String?  @db.Text
+  userId    String
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "ActivityLog_userId_fkey")
+
+  @@index([createdAt], map: "ActivityLog_createdAt_idx")
+  @@index([userId], map: "ActivityLog_userId_idx")
+}
+
+model desa {
+  id                String              @id
+  nama              String              @unique(map: "Desa_nama_key")
+  kecamatan         String
+  kabupaten         String
+  provinsi          String
+  insiden           insiden[]
+  jadwalpengumpulan jadwalpengumpulan[]
+  pengumpulansampah pengumpulansampah[]
+  user              user[]
+
+  @@index([nama], map: "Desa_nama_idx")
+}
+
+model insiden {
+  id          String    @id
+  desaId      String
+  type        String
+  location    String
+  description String    @db.Text
+  status      String    @default("Pending")
+  time        DateTime  @default(now())
+  reporterId  String
+  handledBy   String?
+  timeHandled DateTime?
+  desa        desa      @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "Insiden_desaId_fkey")
+
+  @@index([desaId], map: "Insiden_desaId_idx")
+  @@index([status], map: "Insiden_status_idx")
+}
+
+model jadwalpengumpulan {
+  id           String   @id
+  desaId       String
+  hari         String
+  waktuMulai   DateTime
+  waktuSelesai DateTime
+  desa         desa     @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "JadwalPengumpulan_desaId_fkey")
+
+  @@index([desaId], map: "JadwalPengumpulan_desaId_idx")
+}
+
+model leaderboard {
+  id                String @id
+  namaPemilik       String
+  totalPoin         Int
+  jumlahPengumpulan Int
+
+  @@index([namaPemilik], map: "Leaderboard_namaPemilik_idx")
+}
+
+model pengumpulansampah {
+  id          String   @id
+  desaId      String
+  namaPemilik String
+  berat       Decimal  @db.Decimal(5, 2)
+  jenisSampah String
+  poin        Int
+  waktu       DateTime @default(now())
+  rt          String   @db.VarChar(3)
+  rw          String   @db.VarChar(3)
+  desa        desa     @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_desaId_fkey")
+
+  @@index([desaId], map: "PengumpulanSampah_desaId_idx")
+  @@index([namaPemilik], map: "PengumpulanSampah_namaPemilik_idx")
+}
+
+model session {
+  id        String   @id
+  token     String   @unique(map: "Session_token_key")
+  expires   DateTime
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Session_userId_fkey")
+
+  @@index([userId], map: "Session_userId_idx")
+}
+
+model user {
+  id          String        @id
+  email       String        @unique(map: "User_email_key")
+  username    String        @unique(map: "User_username_key")
+  password    String
+  role        user_role     @default(WARGA)
+  desaId      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  activitylog activitylog[]
+  session     session[]
+  desa        desa?         @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "User_desaId_fkey")
+
+  @@index([desaId], map: "User_desaId_idx")
+}
+
+enum user_role {
   SUPERADMIN
   ADMIN
   WARGA
-}
-
-enum InsidenStatus {
-  PENDING
-  IN_PROGRESS
-  RESOLVED
-}
-
-enum Hari {
-  SENIN
-  SELASA
-  RABU
-  KAMIS
-  JUMAT
-  SABTU
-  MINGGU
-}
-
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  username  String   @unique
-  password  String
-  role      Role     @default(WARGA)
-  desaId    String?  
-  desa      Desa?    @relation(fields: [desaId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  sessions       Session[]
-  activityLogs   ActivityLog[]
-  leaderboard    Leaderboard?  @relation(fields: [id], references: [userId], onDelete: Cascade)
-
-  @@index([desaId])
-}
-
-model Desa {
-  id                String              @id @default(uuid())
-  nama              String              @unique
-  kecamatan         String              
-  kabupaten         String              
-  provinsi          String              
-  jadwalPengumpulan JadwalPengumpulan[]
-  pengumpulanSampah PengumpulanSampah[]
-  users             User[]
-  insiden           Insiden[]
-
-  @@index([nama])
-}
-
-model JadwalPengumpulan {
-  id          String   @id @default(uuid())
-  desaId      String   
-  hari        Hari
-  waktuMulai  DateTime 
-  waktuSelesai DateTime 
-  desa        Desa     @relation(fields: [desaId], references: [id], onDelete: Cascade)
-
-  @@index([desaId, hari])
-}
-
-model PengumpulanSampah {
-  id           String   @id @default(uuid())
-  desaId       String   
-  userId       String   
-  berat        Decimal  @db.Decimal(5,2)
-  jenisSampah  String   
-  poin         Int
-  waktu        DateTime @default(now())
-  rt           String   @db.VarChar(3)
-  rw           String   @db.VarChar(3)
-  desa         Desa     @relation(fields: [desaId], references: [id], onDelete: Cascade)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([desaId])
-  @@index([userId])
-}
-
-model Leaderboard {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  totalPoin         Int    
-  jumlahPengumpulan Int
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([totalPoin])
-}
-
-model Insiden {
-  id          String   @id @default(uuid())
-  desaId      String   
-  type        String
-  location    String
-  description String   @db.Text
-  status      InsidenStatus @default(PENDING)
-  time        DateTime @default(now())
-  reporterId  String
-  handledById String?  
-  timeHandled DateTime?
-  desa        Desa     @relation(fields: [desaId], references: [id], onDelete: Cascade)
-  reporter    User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  handledBy   User?    @relation(fields: [handledById], references: [id], onDelete: SetNull)
-
-  @@index([desaId])
-  @@index([status])
-  @@index([reporterId])
-  @@index([handledById])
-}
-
-model Session {
-  id          String    @id @default(uuid())
-  token       String    @unique
-  expires     DateTime
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([userId])
-}
-
-model ActivityLog {
-  id          String    @id @default(uuid())
-  action      String
-  details     String?   @db.Text
-  ipAddress   String?
-  userAgent   String?   @db.Text
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  createdAt   DateTime  @default(now())
-
-  @@index([userId])
-  @@index([createdAt])
 }

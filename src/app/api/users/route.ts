@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "../../../lib/prisma";
-import { Role } from "@prisma/client";
+import { user_role } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -9,17 +9,15 @@ const userSchema = z.object({
   email: z.string().email(),
   username: z.string().min(3).max(20),
   role: z.enum(["ADMIN", "SUPERADMIN", "WARGA"]), // Role yang diizinkan
-  desaId: z.string().uuid(), // Validasi desaId yang harus UUID
+  desaId: z.string().uuid().optional(), // DesaId bisa opsional sesuai model Prisma
 });
 
 // Mendapatkan data pengguna
 export async function GET(req: Request) {
-  const userRole = req.headers.get("x-user-role") as Role;
+  const userRole = req.headers.get("x-user-role") as user_role;
 
-  // Debugging log untuk melihat role
   console.log("User Role:", userRole);
 
-  // Pastikan hanya ADMIN atau SUPERADMIN yang bisa mengakses
   if (userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
     return NextResponse.json({ message: "Only ADMIN or SUPERADMIN can access this endpoint" }, { status: 403 });
   }
@@ -35,7 +33,7 @@ export async function GET(req: Request) {
         desa: {
           select: {
             id: true,
-            nama: true, // Gantilah 'namaDesa' menjadi 'nama' sesuai dengan model yang ada
+            nama: true,
           },
         },
       },
@@ -49,37 +47,41 @@ export async function GET(req: Request) {
 
 // Membuat pengguna baru
 export async function POST(req: Request) {
-  const userRole = req.headers.get("x-user-role") as Role;
+  const userRole = req.headers.get("x-user-role") as user_role;
 
-  // Cek apakah hanya SUPERADMIN yang boleh menambah pengguna baru
   if (userRole !== "SUPERADMIN") {
     return NextResponse.json({ message: "Only SUPERADMIN can create users" }, { status: 403 });
   }
 
   try {
     const body = await req.json();
-    const validatedData = userSchema.parse(body); // Validasi input dengan Zod
+    const validatedData = userSchema.parse(body);
 
-    // Cari desa berdasarkan desaId
-    const desa = await prisma.desa.findUnique({
-      where: { id: validatedData.desaId },
-    });
+    // Jika desaId diberikan, cek apakah desa ada di database
+    if (validatedData.desaId) {
+      const desa = await prisma.desa.findUnique({
+        where: { id: validatedData.desaId },
+      });
 
-    if (!desa) {
-      return NextResponse.json({ message: "Desa not found" }, { status: 404 });
+      if (!desa) {
+        return NextResponse.json({ message: "Desa not found" }, { status: 404 });
+      }
     }
 
     // Enkripsi password dengan bcrypt
-    const hashedPassword = await bcrypt.hash("defaultpassword", 10); // 10 adalah tingkat salt
+    const hashedPassword = await bcrypt.hash("defaultpassword", 10);
 
     // Proses pembuatan pengguna baru
     const newUser = await prisma.user.create({
       data: {
+        id: crypto.randomUUID(), // Tambahkan ID unik
         email: validatedData.email,
         username: validatedData.username,
-        password: hashedPassword, // Menggunakan password yang sudah dienkripsi
+        password: hashedPassword,
         role: validatedData.role,
-        desaId: validatedData.desaId, // Menyambungkan dengan desa
+        desaId: validatedData.desaId || null, // Pastikan sesuai dengan model
+        createdAt: new Date(), // Tambahkan createdAt sesuai model
+        updatedAt: new Date(), // Tambahkan updatedAt sesuai model
       },
     });
 

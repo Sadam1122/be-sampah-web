@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma'; // Pastikan path sesuai dengan struktur proyek Anda
-import { Role } from '@prisma/client'; // Import Role dari Prisma
+import { user_role } from '@prisma/client'; // Import Role dari Prisma
 
 export async function GET(req: Request) {
   try {
     // Ambil role pengguna dari header request
-    const userRole = req.headers.get('x-user-role')?.toUpperCase() as Role | undefined;
+    const userRole = req.headers.get('x-user-role')?.toUpperCase() as user_role | undefined;
     console.log('User Role:', userRole); // Debugging log
 
     // Pastikan role yang diterima valid
-    if (!userRole || !Object.values(Role).includes(userRole)) {
+    if (!userRole || !Object.values(user_role).includes(userRole)) {
       return NextResponse.json({ message: 'Forbidden: Invalid Role' }, { status: 403 });
     }
 
     // Hanya ADMIN atau SUPERADMIN yang bisa mengakses
-    if (userRole !== Role.ADMIN && userRole !== Role.SUPERADMIN) {
+    if (userRole !== user_role.ADMIN && userRole !== user_role.SUPERADMIN) {
       return NextResponse.json({ message: 'Forbidden: Access Denied' }, { status: 403 });
     }
 
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     const desaId = url.searchParams.get('desaId'); // Ambil desaId dari query string
 
     // Untuk SUPERADMIN: bisa akses semua desa
-    if (userRole === Role.SUPERADMIN) {
+    if (userRole === user_role.SUPERADMIN) {
       const insiden = await prisma.insiden.findMany({
         where: {
           status: status || undefined,
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     }
 
     // Untuk ADMIN: hanya bisa akses insiden desa mereka
-    if (userRole === Role.ADMIN && desaId) {
+    if (userRole === user_role.ADMIN && desaId) {
       const insiden = await prisma.insiden.findMany({
         where: {
           desaId: desaId, // Filter berdasarkan desaId yang diterima dari query string

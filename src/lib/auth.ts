@@ -16,16 +16,17 @@ export function verifyToken(token: string): JwtPayload | null {
 
 export async function logActivity(userId: string, action: string, details: string) {
   try {
-    await prisma.activityLog.create({
+    await prisma.activitylog.create({
       data: {
+        id: crypto.randomUUID(), // Generate UUID manual
         userId,
         action,
         details,
-        ipAddress: "", // Bisa ditambahkan IP dari request
-        userAgent: "", // Bisa ditambahkan user agent dari request
+        ipAddress: "", // Bisa diisi dengan IP dari request
+        userAgent: "", // Bisa diisi dengan User Agent dari request
       },
-    })
+    });
   } catch (error) {
-    console.error("Activity logging error:", error)
+    console.error("Activity logging error:", error);
   }
 }

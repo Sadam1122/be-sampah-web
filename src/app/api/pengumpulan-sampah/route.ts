@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
     // Jika superadmin, ambil semua data tanpa filter desaId
     if (userRole === "SUPERADMIN") {
-      const pengumpulanSampah = await prisma.pengumpulanSampah.findMany({
+      const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
         orderBy: { waktu: "desc" }, // Urutkan dari terbaru
       })
       return NextResponse.json(pengumpulanSampah)
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     }
 
     // Untuk admin & warga, ambil data berdasarkan desaId
-    const pengumpulanSampah = await prisma.pengumpulanSampah.findMany({
+    const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
       where: { desaId },
       orderBy: { waktu: "desc" },
     })
@@ -64,8 +64,9 @@ export async function POST(request: Request) {
     }
 
     // Menyimpan pengumpulan sampah dengan RT dan RW
-    const newPengumpulanSampah = await prisma.pengumpulanSampah.create({
+    const newPengumpulanSampah = await prisma.pengumpulansampah.create({
       data: {
+        id: crypto.randomUUID(), // Tambahkan id unik
         namaPemilik: validatedData.namaPemilik,
         berat: validatedData.berat,
         rt: validatedData.rt,  // RT bisa 1-3 karakter
@@ -75,6 +76,7 @@ export async function POST(request: Request) {
         desaId: validatedData.desaId,  // Menyambungkan desa dengan desaId
       },
     })
+
     return NextResponse.json(newPengumpulanSampah, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {

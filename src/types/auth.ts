@@ -1,4 +1,4 @@
-import type { User, Role } from "@prisma/client"
+import type { user as User, user_role as Role } from "@prisma/client";
 
 export interface LoginRequest {
   email: string
