@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const leaderboard = await prisma.leaderboard.findMany({
       orderBy: { totalPoin: "desc" },
-      take: 10,
+      take: 100,
     });
 
     return NextResponse.json(leaderboard);
