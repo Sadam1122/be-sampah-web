@@ -2,12 +2,20 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { user_role } from "@prisma/client";
 
+
 // Enum status insiden sesuai dengan database
 enum InsidenStatus {
   PENDING = "PENDING",
   IN_PROGRESS = "IN_PROGRESS",
   RESOLVED = "RESOLVED",
 }
+// Fungsi konversi waktu manual ke zona waktu Jakarta (WIB)
+function getJakartaTime() {
+  const now = new Date();
+  const offsetJakarta = 7 * 60 * 60 * 1000; // UTC+7 (Jakarta)
+  return new Date(now.getTime() + offsetJakarta);
+}
+
 
 // 🟢 GET: Ambil daftar insiden berdasarkan desaId dan status
 export async function GET(req: Request) {
@@ -53,31 +61,41 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { desaId, type, location, description } = body;
+    const { desaId, type, location, description, reporterId } = body; // 🔹 desaId diambil dari body
 
-    // Ambil user ID dari header (harus dikirim oleh frontend)
-    const reporterId = req.headers.get("x-user-id");
+    // Ambil role dari header (harus dikirim oleh frontend saat login)
+    const role = req.headers.get("x-user-role")?.toUpperCase();
 
-    if (!reporterId) {
-      return NextResponse.json({ message: "Forbidden: Missing user ID" }, { status: 403 });
+    // Hanya ADMIN dan SUPERADMIN yang bisa menambahkan insiden
+    if (role !== "ADMIN" && role !== "SUPERADMIN") {
+      return NextResponse.json({ message: "Forbidden: Only ADMIN or SUPERADMIN can create incidents" }, { status: 403 });
     }
 
-    if (!desaId || !type || !location || !description) {
+    if (!desaId || !type || !location || !description || !reporterId) {
       return NextResponse.json({ message: "Invalid data" }, { status: 400 });
     }
 
+    // Validasi desaId harus berupa UUID
+    if (!/^[0-9a-fA-F-]{36}$/.test(desaId)) {
+      return NextResponse.json({ message: "Invalid desaId format" }, { status: 400 });
+    }
+
+    // Waktu sekarang dalam zona waktu Jakarta
+    const timeHandled = getJakartaTime();
+
+    // Buat insiden baru
     const newInsiden = await prisma.insiden.create({
       data: {
         id: crypto.randomUUID(), // Buat ID baru secara manual
-        desaId,
+        desaId, // 🔹 Sekarang menggunakan desaId dari body
         type,
         location,
         description,
-        status: InsidenStatus.PENDING, // Default ke Pending
+        status: InsidenStatus.PENDING, // Pakai enum untuk status default
         time: new Date(),
-        reporterId, // Diisi otomatis dari header
-        handledBy: null, // Set handledBy ke null
-        timeHandled: null, // Set timeHandled ke null
+        reporterId, // 🔹 Gunakan reporterId dari body
+        handledBy: reporterId, // 🔹 Otomatis diisi oleh reporterId
+        timeHandled, // Waktu dengan zona Jakarta
       },
     });
 
@@ -87,7 +105,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
-
 
 
 
