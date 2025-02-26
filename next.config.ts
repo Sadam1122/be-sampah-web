@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
           // Pengaturan CORS
           {
             key: "Access-Control-Allow-Origin",
-            value: process.env.CORS_ORIGIN || "http://localhost:3000", // Sesuaikan dengan frontend
+            value: process.env.CORS_ORIGIN || "https://sobatsampah.id",
           },
           {
             key: "Access-Control-Allow-Methods",
@@ -44,13 +44,13 @@ const nextConfig: NextConfig = {
 
   // Konfigurasi Image Optimization
   images: {
-    domains: ["example.com"], // Ganti dengan domain gambar yang digunakan
+    domains: ["sobatsampah.id", "example.com"], // Tambahkan domain gambar
     formats: ["image/avif", "image/webp"],
   },
 
   // Konfigurasi Environment Variables
   env: {
-    API_BASE_URL: process.env.API_BASE_URL || "http://localhost:3001/api", // Bisa diubah dari `.env.local`
+    API_BASE_URL: process.env.API_BASE_URL || "https://api.sobatsampah.id/api", // Disesuaikan dengan API yang sudah di-deploy
   },
 
   // Konfigurasi TypeScript

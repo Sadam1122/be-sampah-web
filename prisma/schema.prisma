@@ -68,8 +68,11 @@ model leaderboard {
   namaPemilik       String
   totalPoin         Int
   jumlahPengumpulan Int
+  userId            String?
+  user              user?   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Leaderboard_userId_fkey")
 
   @@index([namaPemilik], map: "Leaderboard_namaPemilik_idx")
+  @@index([userId], map: "Leaderboard_userId_idx")
 }
 
 model pengumpulansampah {
@@ -82,10 +85,13 @@ model pengumpulansampah {
   waktu       DateTime @default(now())
   rt          String   @db.VarChar(3)
   rw          String   @db.VarChar(3)
+  userId      String?
   desa        desa     @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_desaId_fkey")
+  user        user?     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_userId_fkey")
 
   @@index([desaId], map: "PengumpulanSampah_desaId_idx")
   @@index([namaPemilik], map: "PengumpulanSampah_namaPemilik_idx")
+  @@index([userId], map: "PengumpulanSampah_userId_idx")
 }
 
 model session {
@@ -112,6 +118,9 @@ model user {
   activitylog activitylog[]
   session     session[]
   desa        desa?         @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "User_desaId_fkey")
+
+  pengumpulansampah pengumpulansampah[]
+  leaderboard        leaderboard[]
 
   @@index([desaId], map: "User_desaId_idx")
 }
