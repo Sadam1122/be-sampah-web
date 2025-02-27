@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { z } from "zod"
+import { Decimal } from "@prisma/client/runtime/library";
+
 
 const prisma = new PrismaClient()
 
@@ -14,7 +16,7 @@ const pengumpulanSampahSchema = z.object({
   username: z.string(),
 })
 
-// Handler GET
+// Handler GET - Ambil hanya data yang available (true)
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
@@ -23,6 +25,7 @@ export async function GET(req: Request) {
 
     if (userRole === "SUPERADMIN") {
       const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
+        where: { available: true }, // Hanya tampilkan data available
         orderBy: { waktu: "desc" },
       })
       return NextResponse.json(pengumpulanSampah)
@@ -33,7 +36,7 @@ export async function GET(req: Request) {
     }
 
     const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
-      where: { desaId },
+      where: { desaId, available: true }, // Hanya tampilkan data available
       orderBy: { waktu: "desc" },
     })
 
@@ -44,7 +47,7 @@ export async function GET(req: Request) {
   }
 }
 
-// Handler POST
+// Handler POST - Tambah data baru dengan available: false
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -76,9 +79,9 @@ export async function POST(request: Request) {
         poin,
         desaId: user.desaId,
         userId: user.id,
+        available: false, // Default: false, harus dikonfirmasi agar tampil
       },
-    });
-    
+    })
 
     console.log("Created Data:", newPengumpulanSampah) // Debugging
 
@@ -91,5 +94,61 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
+  }
+}
+
+
+// Handler PATCH - Gabungkan data jika jenis sampah sama
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    // Ambil data pengumpulan sampah berdasarkan ID
+    const existingData = await prisma.pengumpulansampah.findUnique({ where: { id } });
+
+    if (!existingData) {
+      return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+    }
+
+    // Cari data lain yang sudah available dengan jenis sampah yang sama
+    const similarData = await prisma.pengumpulansampah.findFirst({
+      where: {
+        jenisSampah: existingData.jenisSampah,
+        desaId: existingData.desaId,
+        available: true,
+      },
+    });
+
+    if (similarData) {
+      // Gunakan .plus() untuk menjumlahkan Decimal
+      await prisma.pengumpulansampah.update({
+        where: { id: similarData.id },
+        data: {
+          berat: new Decimal(similarData.berat).plus(existingData.berat),
+          poin: similarData.poin + existingData.poin, // poin tetap number
+        },
+      });
+
+      // Hapus data lama setelah digabung
+      await prisma.pengumpulansampah.delete({ where: { id } });
+
+      return NextResponse.json({ message: "Data merged successfully" });
+    } else {
+      // Jika tidak ada data yang sama, cukup ubah available: true
+      const updatedPengumpulanSampah = await prisma.pengumpulansampah.update({
+        where: { id },
+        data: { available: true },
+      });
+
+      return NextResponse.json(updatedPengumpulanSampah);
+    }
+  } catch (error) {
+    console.error("PATCH Error:", error);
+    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }
