@@ -65,20 +65,16 @@ model jadwalpengumpulan {
 
 model leaderboard {
   id                String @id
-  namaPemilik       String
   totalPoin         Int
   jumlahPengumpulan Int
   userId            String?
   user              user?   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Leaderboard_userId_fkey")
-
-  @@index([namaPemilik], map: "Leaderboard_namaPemilik_idx")
   @@index([userId], map: "Leaderboard_userId_idx")
 }
 
 model pengumpulansampah {
   id          String   @id
   desaId      String
-  namaPemilik String
   berat       Decimal  @db.Decimal(5, 2)
   jenisSampah String
   poin        Int
@@ -90,7 +86,6 @@ model pengumpulansampah {
   user        user?     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_userId_fkey")
 
   @@index([desaId], map: "PengumpulanSampah_desaId_idx")
-  @@index([namaPemilik], map: "PengumpulanSampah_namaPemilik_idx")
   @@index([userId], map: "PengumpulanSampah_userId_idx")
 }
 

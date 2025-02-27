@@ -47,27 +47,38 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const validatedData = desaSchema.parse(body)
+    const body = await request.json();
+    const validatedData = desaSchema.parse(body);
 
-    // Check if user is SUPERADMIN (can be based on headers or JWT token)
-    const role = request.headers.get("x-role") // Assuming role is passed via headers
+    // Cek role dari header
+    const role = request.headers.get("x-user-role"); // Sesuai dengan backend kamu
 
     if (role !== "SUPERADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Create the new desa
+    // Buat desa baru dengan id otomatis
     const newDesa = await prisma.desa.create({
-      data: validatedData,
-    })
+      data: {
+        id: crypto.randomUUID(),
+        ...validatedData,
+      },
+    });
 
-    return NextResponse.json(newDesa, { status: 201 })
+    return NextResponse.json(newDesa, { status: 201 });
   } catch (error) {
-    console.error("Error in POST /api/desa/:", error)
+    console.error("Error in POST /api/desa:", error);
+
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Validation error", details: error.errors }, { status: 400 })
+      return NextResponse.json(
+        { error: "Validation error", details: error.errors },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
+    
+    return NextResponse.json(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
   }
 }

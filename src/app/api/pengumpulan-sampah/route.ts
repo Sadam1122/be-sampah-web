@@ -7,12 +7,11 @@ const prisma = new PrismaClient()
 // Skema validasi pengumpulan sampah
 const pengumpulanSampahSchema = z.object({
   berat: z.number().positive(),
-  namaPemilik: z.string().max(100),
-  rt: z.string().min(1).max(3), // Bisa 1-3 karakter
-  rw: z.string().min(1).max(3), // Bisa 1-3 karakter
-  desaId: z.string().uuid(), // Desa yang terhubung
+  rt: z.string().min(1).max(3),
+  rw: z.string().min(1).max(3),
   jenisSampah: z.string().max(50),
   poin: z.number().int().nonnegative(),
+  username: z.string(),
 })
 
 // Handler GET
@@ -20,22 +19,19 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const desaId = url.searchParams.get("desaId")
-    const userRole = req.headers.get("x-user-role") // Ambil role dari header
+    const userRole = req.headers.get("x-user-role")
 
-    // Jika superadmin, ambil semua data tanpa filter desaId
     if (userRole === "SUPERADMIN") {
       const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
-        orderBy: { waktu: "desc" }, // Urutkan dari terbaru
+        orderBy: { waktu: "desc" },
       })
       return NextResponse.json(pengumpulanSampah)
     }
 
-    // Jika bukan superadmin, desaId wajib ada
     if (!desaId) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 })
     }
 
-    // Untuk admin & warga, ambil data berdasarkan desaId
     const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
       where: { desaId },
       orderBy: { waktu: "desc" },
@@ -43,7 +39,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(pengumpulanSampah)
   } catch (error) {
-    console.error(error)
+    console.error("GET Error:", error)
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
   }
 }
@@ -52,37 +48,48 @@ export async function GET(req: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const validatedData = pengumpulanSampahSchema.parse(body)
+    console.log("Received body:", body) // Debugging
 
-    // Cari desa berdasarkan desaId
-    const desa = await prisma.desa.findUnique({
-      where: { id: validatedData.desaId },
+    const validatedData = pengumpulanSampahSchema.parse(body)
+    const { username, berat, rt, rw, jenisSampah, poin } = validatedData
+
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true, desaId: true },
     })
 
-    if (!desa) {
-      return NextResponse.json({ error: "Desa not found" }, { status: 404 })
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Menyimpan pengumpulan sampah dengan RT dan RW
+    if (!user.desaId) {
+      return NextResponse.json({ error: "User does not have an associated desa" }, { status: 400 })
+    }
+
     const newPengumpulanSampah = await prisma.pengumpulansampah.create({
       data: {
-        id: crypto.randomUUID(), // Tambahkan id unik
-        namaPemilik: validatedData.namaPemilik,
-        berat: validatedData.berat,
-        rt: validatedData.rt,  // RT bisa 1-3 karakter
-        rw: validatedData.rw,  // RW bisa 1-3 karakter
-        jenisSampah: validatedData.jenisSampah,
-        poin: validatedData.poin,
-        desaId: validatedData.desaId,  // Menyambungkan desa dengan desaId
+        id: crypto.randomUUID(),
+        berat,
+        rt,
+        rw,
+        jenisSampah,
+        poin,
+        desaId: user.desaId,
+        userId: user.id,
       },
-    })
+    });
+    
+
+    console.log("Created Data:", newPengumpulanSampah) // Debugging
 
     return NextResponse.json(newPengumpulanSampah, { status: 201 })
   } catch (error) {
+    console.error("POST Error:", error)
+
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.errors }, { status: 400 })
     }
-    console.error(error)
+
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
   }
 }
