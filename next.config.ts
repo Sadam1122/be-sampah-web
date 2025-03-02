@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, x-user-role",
+            value: "Content-Type, Authorization, x-user-role, x-user-desa-id",
           },
           { key: "Access-Control-Allow-Credentials", value: "true" },
           { key: "X-Content-Type-Options", value: "nosniff" },

@@ -2,24 +2,28 @@ import { NextResponse } from "next/server";
 import prisma from "../../../../lib/prisma";
 import { user_role } from "@prisma/client";
 
-export async function GET(req: Request, { params }: { params: { desaId: string } }) {
+// Menandai route sebagai dynamic agar Next.js tidak meng-cache params
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request, context: { params?: { desaId?: string } }) {
   try {
-    const desaId = params.desaId;
-    const userRole = req.headers.get("x-user-role") as user_role;
+    // Pastikan params tersedia dengan await
+    const { desaId } = await context.params ?? {};
 
     if (!desaId) {
       return NextResponse.json({ message: "desaId is required" }, { status: 400 });
     }
 
+    const userRole = req.headers.get("x-user-role") as user_role;
+
+    // Validasi role agar hanya ADMIN dan SUPERADMIN yang bisa akses
+    if (!userRole || (userRole !== "ADMIN" && userRole !== "SUPERADMIN")) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
+
     // Jika SUPERADMIN, bisa melihat semua pengguna tanpa filter desaId
     if (userRole === "SUPERADMIN") {
       const users = await prisma.user.findMany({
-        where: {
-          OR: [
-            { desaId: desaId }, // User yang sesuai desaId
-            { desaId: null }, // SUPERADMIN tetap bisa terlihat
-          ],
-        },
         select: {
           id: true,
           email: true,
@@ -37,11 +41,9 @@ export async function GET(req: Request, { params }: { params: { desaId: string }
       return NextResponse.json(users);
     }
 
-    // Jika bukan SUPERADMIN, hanya ambil user berdasarkan desaId
+    // Jika ADMIN, hanya bisa melihat user yang ada di desa yang diakses
     const users = await prisma.user.findMany({
-      where: {
-        desaId: desaId,
-      },
+      where: { desaId },
       select: {
         id: true,
         email: true,
