@@ -12,13 +12,17 @@ const updatePengumpulanSampahSchema = z.object({
 });
 
 // Handler PUT untuk update data berdasarkan ID
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> } // Ubah tipe params menjadi Promise
+) {
   try {
-    if (!params || !params.id) {
+    const { id } = await params; // Ambil id dengan await
+
+    if (!id) {
       return NextResponse.json({ error: "ID tidak ditemukan di URL" }, { status: 400 });
     }
 
-    const { id } = params;
     console.log("PUT request for ID:", id);
 
     // Cek apakah data dengan ID tersebut ada
@@ -55,36 +59,38 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-
 // Handler DELETE untuk menghapus data berdasarkan ID
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
-    try {
-      if (!params || !params.id) {
-        return NextResponse.json({ error: "ID tidak ditemukan di URL" }, { status: 400 });
-      }
-  
-      const { id } = params;
-      console.log("DELETE request for ID:", id);
-  
-      // Cek apakah data dengan ID tersebut ada
-      const existingData = await prisma.pengumpulansampah.findUnique({
-        where: { id },
-      });
-  
-      if (!existingData) {
-        return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
-      }
-  
-      // Hapus data
-      await prisma.pengumpulansampah.delete({
-        where: { id },
-      });
-  
-      console.log("Deleted Data ID:", id);
-      return NextResponse.json({ message: "Data berhasil dihapus" }, { status: 200 });
-    } catch (error) {
-      console.error("DELETE Error:", error);
-      return NextResponse.json({ error: "Terjadi kesalahan saat menghapus data" }, { status: 500 });
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> } // Ubah tipe params menjadi Promise
+) {
+  try {
+    const { id } = await params; // Ambil id dengan await
+
+    if (!id) {
+      return NextResponse.json({ error: "ID tidak ditemukan di URL" }, { status: 400 });
     }
+
+    console.log("DELETE request for ID:", id);
+
+    // Cek apakah data dengan ID tersebut ada
+    const existingData = await prisma.pengumpulansampah.findUnique({
+      where: { id },
+    });
+
+    if (!existingData) {
+      return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
+    }
+
+    // Hapus data
+    await prisma.pengumpulansampah.delete({
+      where: { id },
+    });
+
+    console.log("Deleted Data ID:", id);
+    return NextResponse.json({ message: "Data berhasil dihapus" }, { status: 200 });
+  } catch (error) {
+    console.error("DELETE Error:", error);
+    return NextResponse.json({ error: "Terjadi kesalahan saat menghapus data" }, { status: 500 });
   }
-  
+}

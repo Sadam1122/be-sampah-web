@@ -5,11 +5,14 @@ import { user_role } from "@prisma/client";
 // Menandai route sebagai dynamic agar Next.js tidak meng-cache params
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request, context: { params?: { desaId?: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ desaId: string }> } // Ubah tipe params menjadi Promise
+) {
   try {
-    // Pastikan params tersedia dengan await
-    const { desaId } = await context.params ?? {};
-
+    // Dapatkan nilai params dengan await
+    const { desaId } = await params;
+    
     if (!desaId) {
       return NextResponse.json({ message: "desaId is required" }, { status: 400 });
     }

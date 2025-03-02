@@ -3,11 +3,10 @@ import prisma from "@/lib/prisma"; // Pastikan path import benar
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Ubah tipe params menjadi Promise
 ) {
   try {
-    const { id } = params;
-
+    const { id } = await params; // await params untuk mendapatkan id
     console.log("Fetching user with ID:", id);
 
     if (!id) {
@@ -30,8 +29,6 @@ export async function GET(
         },
       },
     });
-
-    console.log("User found:", user);
 
     if (!user) {
       return NextResponse.json({ message: "User tidak ditemukan" }, { status: 404 });
