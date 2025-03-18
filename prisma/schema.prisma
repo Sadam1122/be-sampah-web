@@ -64,13 +64,14 @@ model jadwalpengumpulan {
 }
 
 model leaderboard {
-  id                String @id
+  id                String  @id
   totalPoin         Int
   jumlahPengumpulan Int
   available         Boolean @default(false) 
-  poinSaatIni       Int @default(0)
+  poinSaatIni       Int     @default(0)
   userId            String?
   user              user?   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Leaderboard_userId_fkey")
+  
   @@index([userId], map: "Leaderboard_userId_idx")
 }
 
@@ -86,10 +87,13 @@ model pengumpulansampah {
   userId      String?
   available   Boolean  @default(false)
   desa        desa     @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_desaId_fkey")
-  user        user?     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_userId_fkey")
+  user        user?    @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_userId_fkey")
+  wasteTypeId String?
+  wastetype   wastetype? @relation(fields: [wasteTypeId], references: [id], onDelete: SetNull, map: "PengumpulanSampah_wasteTypeId_fkey")
 
   @@index([desaId], map: "PengumpulanSampah_desaId_idx")
   @@index([userId], map: "PengumpulanSampah_userId_idx")
+  @@index([wasteTypeId], map: "PengumpulanSampah_wasteTypeId_idx")
 }
 
 model session {
@@ -121,6 +125,23 @@ model user {
   leaderboard        leaderboard[]
 
   @@index([desaId], map: "User_desaId_idx")
+}
+
+// New model for Waste Types
+model wastetype {
+  id          String   @id
+  name        String
+  description String   @db.Text
+  pricePerKg  Decimal  @db.Decimal(10, 2)
+  recyclable  Boolean  @default(false)
+  hazardous   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  pengumpulansampah pengumpulansampah[]
+
+  @@index([name], map: "WasteType_name_idx")
 }
 
 enum user_role {
