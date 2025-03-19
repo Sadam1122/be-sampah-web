@@ -25,7 +25,6 @@ export async function GET(req: Request) {
 
     if (userRole === "SUPERADMIN") {
       const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
-        where: { available: true }, // Hanya tampilkan data available
         orderBy: { waktu: "desc" },
       })
       return NextResponse.json(pengumpulanSampah)
@@ -36,7 +35,7 @@ export async function GET(req: Request) {
     }
 
     const pengumpulanSampah = await prisma.pengumpulansampah.findMany({
-      where: { desaId, available: true }, // Hanya tampilkan data available
+      where: { desaId },
       orderBy: { waktu: "desc" },
     })
 
@@ -47,11 +46,12 @@ export async function GET(req: Request) {
   }
 }
 
+
 // Handler POST - Tambah data baru dengan available: false
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    console.log("Received body:", body) // Debugging
+    console.log("Received body:", body)
 
     const validatedData = pengumpulanSampahSchema.parse(body)
     const { username, berat, rt, rw, jenisSampah, poin } = validatedData
@@ -79,11 +79,10 @@ export async function POST(request: Request) {
         poin,
         desaId: user.desaId,
         userId: user.id,
-        available: false, // Default: false, harus dikonfirmasi agar tampil
       },
     })
 
-    console.log("Created Data:", newPengumpulanSampah) // Debugging
+    console.log("Created Data:", newPengumpulanSampah)
 
     return NextResponse.json(newPengumpulanSampah, { status: 201 })
   } catch (error) {
@@ -96,6 +95,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 })
   }
 }
+
 
 
 // Handler PATCH - Gabungkan data jika jenis sampah sama
@@ -115,12 +115,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
-    // Cari data lain yang sudah available dengan jenis sampah yang sama
+    // Cari data lain yang sudah ada dengan jenis sampah yang sama di desa yang sama
     const similarData = await prisma.pengumpulansampah.findFirst({
       where: {
         jenisSampah: existingData.jenisSampah,
         desaId: existingData.desaId,
-        available: true,
       },
     });
 
@@ -139,13 +138,7 @@ export async function PATCH(request: Request) {
 
       return NextResponse.json({ message: "Data merged successfully" });
     } else {
-      // Jika tidak ada data yang sama, cukup ubah available: true
-      const updatedPengumpulanSampah = await prisma.pengumpulansampah.update({
-        where: { id },
-        data: { available: true },
-      });
-
-      return NextResponse.json(updatedPengumpulanSampah);
+      return NextResponse.json({ error: "No similar data found" }, { status: 404 });
     }
   } catch (error) {
     console.error("PATCH Error:", error);

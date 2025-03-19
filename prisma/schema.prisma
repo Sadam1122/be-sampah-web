@@ -67,7 +67,7 @@ model leaderboard {
   id                String  @id
   totalPoin         Int
   jumlahPengumpulan Int
-  available         Boolean @default(false) 
+  available         Boolean @default(true) 
   poinSaatIni       Int     @default(0)
   userId            String?
   user              user?   @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Leaderboard_userId_fkey")
@@ -85,7 +85,7 @@ model pengumpulansampah {
   rt          String   @db.VarChar(3)
   rw          String   @db.VarChar(3)
   userId      String?
-  available   Boolean  @default(false)
+  available   Boolean  @default(true)
   desa        desa     @relation(fields: [desaId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_desaId_fkey")
   user        user?    @relation(fields: [userId], references: [id], onDelete: Cascade, map: "PengumpulanSampah_userId_fkey")
   wasteTypeId String?
